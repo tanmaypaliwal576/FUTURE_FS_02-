@@ -5,6 +5,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 
 import authRoutes from "./routes/authRoutes.js";
+import productRoute from "./routes/productRoute.js";
 
 dotenv.config();
 
@@ -24,6 +25,7 @@ app.use(
 
 // ROUTES
 app.use("/auth", authRoutes);
+app.use("/products", productRoute);
 
 // DEFAULT ROUTE
 app.get("/", (req, res) => {
