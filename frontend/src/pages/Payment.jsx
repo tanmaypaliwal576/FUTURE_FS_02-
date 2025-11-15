@@ -1,10 +1,14 @@
 import { useNavigate } from "react-router-dom";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { MapPin, CreditCard } from "lucide-react";
 import toast from "react-hot-toast";
+import axios from "axios";
 
 export default function Payment() {
   const navigate = useNavigate();
+
+  const [cart, setCart] = useState([]);
+  const [subtotal, setSubtotal] = useState(0);
 
   const [form, setForm] = useState({
     name: "",
@@ -18,11 +22,45 @@ export default function Payment() {
     cvv: "",
   });
 
+  // LOAD CART FROM BACKEND
+  useEffect(() => {
+    const loadCart = async () => {
+      try {
+        const user = JSON.parse(localStorage.getItem("user"));
+        if (!user) {
+          toast.error("Login first!");
+          return navigate("/auth");
+        }
+
+        const res = await axios.get("http://localhost:3000/cart", {
+          withCredentials: true,
+        });
+
+        setCart(res.data.cart || []);
+
+        const total = (res.data.cart || []).reduce(
+          (acc, item) => acc + item.productId.price * item.qty,
+          0
+        );
+
+        setSubtotal(total);
+      } catch (err) {
+        toast.error("Failed to load cart");
+      }
+    };
+
+    loadCart();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // FORM HANDLER
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  const placeOrder = () => {
+  // PLACE ORDER
+  const placeOrder = async () => {
+    // validate fields
     for (let key in form) {
       if (!form[key]) {
         toast.error("Please fill all required fields");
@@ -30,22 +68,43 @@ export default function Payment() {
       }
     }
 
-    toast.success("Order placed successfully!");
+    if (cart.length === 0) {
+      toast.error("Your cart is empty!");
+      return;
+    }
 
-    setTimeout(() => {
-      navigate("/products");
-    }, 1500);
+    try {
+      const orderData = {
+        items: cart.map((item) => ({
+          productId: item.productId._id,
+          qty: item.qty,
+          price: item.productId.price,
+        })),
+        totalAmount: subtotal,
+        address: form,
+      };
+
+      await axios.post("http://localhost:3000/orders", orderData, {
+        withCredentials: true,
+      });
+
+      toast.success("Order placed successfully!");
+
+      // optional: you may want to call an endpoint to clear cart.
+      // navigate to myorders
+      navigate("/myorders");
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Order failed");
+    }
   };
 
   return (
     <div className="pt-20 px-10 pb-16">
-      {/* Page Title */}
       <h1 className="text-3xl font-bold text-gray-800 mb-8">Checkout</h1>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
-        {/* LEFT SECTION */}
+        {/* LEFT */}
         <div className="lg:col-span-2 space-y-8">
-          {/* SHIPPING ADDRESS */}
           <div className="border border-gray-200 rounded-lg p-6 shadow-sm">
             <div className="flex items-center gap-2 mb-4">
               <MapPin className="text-emerald-600" size={20} />
@@ -62,8 +121,7 @@ export default function Payment() {
                   name="name"
                   value={form.name}
                   onChange={handleChange}
-                  className="w-full border border-gray-300 rounded-md h-11 px-4"
-                  placeholder="John Doe"
+                  className="w-full border rounded-md h-11 px-4"
                 />
               </div>
 
@@ -74,8 +132,7 @@ export default function Payment() {
                   name="email"
                   value={form.email}
                   onChange={handleChange}
-                  className="w-full border border-gray-300 rounded-md h-11 px-4"
-                  placeholder="john@example.com"
+                  className="w-full border rounded-md h-11 px-4"
                 />
               </div>
             </div>
@@ -87,8 +144,7 @@ export default function Payment() {
                 name="address"
                 value={form.address}
                 onChange={handleChange}
-                className="w-full border border-gray-300 rounded-md h-11 px-4"
-                placeholder="123 Main St"
+                className="w-full border rounded-md h-11 px-4"
               />
             </div>
 
@@ -100,8 +156,7 @@ export default function Payment() {
                   name="city"
                   value={form.city}
                   onChange={handleChange}
-                  className="w-full border border-gray-300 rounded-md h-11 px-4"
-                  placeholder="New York"
+                  className="w-full border rounded-md h-11 px-4"
                 />
               </div>
 
@@ -112,8 +167,7 @@ export default function Payment() {
                   name="state"
                   value={form.state}
                   onChange={handleChange}
-                  className="w-full border border-gray-300 rounded-md h-11 px-4"
-                  placeholder="NY"
+                  className="w-full border rounded-md h-11 px-4"
                 />
               </div>
 
@@ -124,14 +178,12 @@ export default function Payment() {
                   name="zip"
                   value={form.zip}
                   onChange={handleChange}
-                  className="w-full border border-gray-300 rounded-md h-11 px-4"
-                  placeholder="10001"
+                  className="w-full border rounded-md h-11 px-4"
                 />
               </div>
             </div>
           </div>
 
-          {/* PAYMENT DETAILS */}
           <div className="border border-gray-200 rounded-lg p-6 shadow-sm">
             <div className="flex items-center gap-2 mb-4">
               <CreditCard className="text-emerald-600" size={20} />
@@ -147,23 +199,21 @@ export default function Payment() {
                 name="cardNumber"
                 value={form.cardNumber}
                 onChange={handleChange}
-                className="w-full border border-gray-300 rounded-md h-11 px-4"
-                placeholder="1234 5678 9012 3456"
+                className="w-full border rounded-md h-11 px-4"
               />
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mt-5">
               <div>
                 <label className="block text-gray-700 mb-1">
-                  Expiry Date (MM/YY)
+                  Expiry (MM/YY)
                 </label>
                 <input
                   type="text"
                   name="expiry"
                   value={form.expiry}
                   onChange={handleChange}
-                  className="w-full border border-gray-300 rounded-md h-11 px-4"
-                  placeholder="12/25"
+                  className="w-full border rounded-md h-11 px-4"
                 />
               </div>
 
@@ -174,8 +224,7 @@ export default function Payment() {
                   name="cvv"
                   value={form.cvv}
                   onChange={handleChange}
-                  className="w-full border border-gray-300 rounded-md h-11 px-4"
-                  placeholder="123"
+                  className="w-full border rounded-md h-11 px-4"
                 />
               </div>
             </div>
@@ -188,43 +237,36 @@ export default function Payment() {
             Order Summary
           </h2>
 
-          <div className="space-y-3 text-gray-700">
-            <div className="flex justify-between">
-              <span>Smart Watch × 1</span>
-              <span>$299.99</span>
-            </div>
-            <div className="flex justify-between">
-              <span>Wireless Earbuds × 1</span>
-              <span>$149.99</span>
-            </div>
-            <div className="flex justify-between">
-              <span>Premium Laptop × 1</span>
-              <span>$1299.99</span>
-            </div>
+          <div className="space-y-3">
+            {cart.length === 0 ? (
+              <p className="text-gray-600">Your cart is empty.</p>
+            ) : (
+              cart.map((item) => (
+                <div
+                  key={item._id}
+                  className="flex justify-between border-b pb-2"
+                >
+                  <span>
+                    {item.productId.name} × {item.qty}
+                  </span>
+                  <span className="font-semibold">
+                    ₹{item.productId.price * item.qty}
+                  </span>
+                </div>
+              ))
+            )}
+          </div>
 
-            <hr className="my-3" />
+          <hr className="my-3" />
 
-            <div className="flex justify-between font-medium">
-              <span>Subtotal</span>
-              <span>$1749.97</span>
-            </div>
-
-            <div className="flex justify-between font-medium">
-              <span>Shipping</span>
-              <span>$5.00</span>
-            </div>
-
-            <hr className="my-3" />
-
-            <div className="flex justify-between font-bold text-lg text-emerald-600">
-              <span>Total</span>
-              <span>$1754.97</span>
-            </div>
+          <div className="flex justify-between font-bold text-xl">
+            <span>Total</span>
+            <span>₹{subtotal}</span>
           </div>
 
           <button
             onClick={placeOrder}
-            className="mt-6 w-full bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-3 rounded-md"
+            className="mt-6 w-full bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-md"
           >
             Place Order
           </button>

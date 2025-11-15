@@ -5,6 +5,9 @@ import Products from "./pages/ProductsList";
 import Navbar from "./pages/Navbar";
 import Cart from "./pages/Cart";
 import Payment from "./pages/Payment";
+import Admin from "./pages/Admin";
+import MyOrders from "./pages/MyOrders";
+
 import { Toaster } from "react-hot-toast";
 
 function App() {
@@ -15,10 +18,18 @@ function App() {
 
       <Routes>
         <Route path="/" element={<Home />} />
-        <Route path="/register" element={<Auth />} />
+
+        {/* Auth page for BOTH Login + Register */}
+        <Route path="/auth" element={<Auth />} />
+
+        {/* Optional: Support /login also */}
+        <Route path="/login" element={<Auth />} />
+
         <Route path="/products" element={<Products />} />
         <Route path="/cart" element={<Cart />} />
         <Route path="/payment" element={<Payment />} />
+        <Route path="/admin" element={<Admin />} />
+        <Route path="/myorders" element={<MyOrders />} />
       </Routes>
 
       <Toaster position="top-center" />
