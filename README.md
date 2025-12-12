@@ -10,7 +10,7 @@
 ---
 
 ## 🌍 Live Demo  
-(Add your deployed website link here)
+https://global-mart-2ee2.onrender.com/
 
 ---
 
